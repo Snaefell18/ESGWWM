@@ -35,6 +35,14 @@
         .animate-pulse-green {
             animation: pulse-green 1s infinite;
         }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
 
         /* Glassmorphism Utilities */
         .glass-panel {
@@ -61,6 +69,11 @@
             background: #64748b;
             transform: translate(10px, -50%);
         }
+        
+        /* Eco Monitor Animations */
+        .leaf-grow { transition: transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: center center; }
+        .sky-transition { transition: stop-color 2s ease; }
+        .sun-transition { transition: all 2s ease; }
     </style>
 </head>
 <body>
@@ -88,6 +101,163 @@
         const XCircle = ({ className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
         );
+
+        // --- NEW ECO LOGO FOR START SCREEN ---
+        const EcoLogo = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
+                <circle cx="50" cy="50" r="45" fill="url(#globeGradient)" stroke="#4ade80" strokeWidth="2" />
+                <defs>
+                    <radialGradient id="globeGradient" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#1e293b" />
+                        <stop offset="100%" stopColor="#0f172a" />
+                    </radialGradient>
+                    <linearGradient id="leafGrad" x1="0" y1="1" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#15803d" />
+                        <stop offset="100%" stopColor="#4ade80" />
+                    </linearGradient>
+                </defs>
+                {/* Stylized Continents/Path */}
+                <path d="M20 50 Q 35 30 50 50 T 80 50" fill="none" stroke="#3b82f6" strokeWidth="1" opacity="0.5" />
+                <path d="M30 70 Q 50 60 70 70" fill="none" stroke="#3b82f6" strokeWidth="1" opacity="0.3" />
+                
+                {/* Growing Leaf */}
+                <g className="animate-float">
+                    <path d="M50 85 C 50 85 50 55 50 50 C 50 40 20 20 20 50 C 20 70 50 85 50 85 Z" fill="url(#leafGrad)" />
+                    <path d="M50 85 C 50 85 50 50 50 45 C 50 35 80 15 80 45 C 80 65 50 85 50 85 Z" fill="url(#leafGrad)" opacity="0.8" />
+                    <line x1="50" y1="85" x2="50" y2="45" stroke="#064e3b" strokeWidth="1" strokeLinecap="round" />
+                </g>
+            </svg>
+        );
+
+        // --- ECO VISUALIZATION COMPONENT ---
+        const EcoMonitor = ({ level }) => {
+            const maxLevel = 14;
+            const progress = Math.min(level / maxLevel, 1);
+            
+            // Sky & Environment Interpolation
+            const skyTop = progress < 0.3 ? '#1e293b' : (progress < 0.7 ? '#38bdf8' : '#0ea5e9'); // Dark -> Sky Blue -> Deep Blue
+            const skyBottom = progress < 0.3 ? '#0f172a' : (progress < 0.7 ? '#bfdbfe' : '#dbeafe'); // Dark -> Light Blue -> White-ish
+            const groundColor = progress < 0.3 ? '#475569' : (progress < 0.7 ? '#166534' : '#22c55e'); // Grey -> Green -> Vibrant Green
+            
+            // Element Opacities & Transforms
+            const smogOpacity = Math.max(0, 0.8 - (progress * 1.5));
+            const factoryOpacity = Math.max(0, 1 - (progress * 1.5));
+            
+            // Sun Movement: Hidden below horizon -> Rising -> High in sky
+            const sunY = 160 - (progress * 130); 
+            const sunOpacity = Math.max(0, (progress - 0.1) * 1.5);
+            const sunColor = progress > 0.8 ? '#fef08a' : '#fbbf24'; // Orange-Yellow -> Bright Yellow
+            const sunScale = 1 + (progress * 0.5);
+
+            // Tree Growth Logic (Split into 3 clusters for organic growth)
+            // Starts small, grows big
+            const c1Scale = Math.min(1, Math.max(0, (progress - 0.1) * 2.5)); // Center starts at 10%
+            const c2Scale = Math.min(1, Math.max(0, (progress - 0.3) * 2.5)); // Left starts at 30%
+            const c3Scale = Math.min(1, Math.max(0, (progress - 0.5) * 2.5)); // Right starts at 50%
+            
+            const leafColor = progress < 0.3 ? '#78716c' : (progress < 0.6 ? '#84cc16' : '#22c55e'); // Dead -> Lime -> Green
+
+            return (
+                <div className="w-full h-48 md:h-full min-h-[220px] flex-1 relative rounded-xl overflow-hidden border-4 border-slate-800 bg-slate-950 shadow-inner mb-6 group">
+                    {/* Monitor Frame FX */}
+                    <div className="absolute inset-0 z-20 pointer-events-none shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] rounded-lg"></div>
+                    
+                    {/* Scanlines */}
+                    <div className="absolute inset-0 z-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none opacity-20"></div>
+
+                    {/* SVG SCENE */}
+                    <svg className="w-full h-full preserve-3d" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="skyGradient" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stopColor={skyTop} className="sky-transition" />
+                                <stop offset="100%" stopColor={skyBottom} className="sky-transition" />
+                            </linearGradient>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+
+                        {/* Sky */}
+                        <rect x="0" y="0" width="400" height="200" fill="url(#skyGradient)" />
+
+                        {/* Rainbow (Only at the very end) */}
+                        {progress > 0.85 && (
+                            <path d="M50 200 Q 200 50 350 200" fill="none" stroke="url(#skyGradient)" strokeWidth="40" strokeOpacity="0.3" className="animate-[fadeIn_2s_ease-out]">
+                                <animate attributeName="stroke" values="red;orange;yellow;green;blue;indigo;violet" dur="5s" repeatCount="indefinite" />
+                            </path>
+                        )}
+                         {progress > 0.85 && (
+                            <path d="M60 200 Q 200 70 340 200" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="10" className="animate-[fadeIn_3s_ease-out]" />
+                        )}
+
+                        {/* Sun */}
+                        <circle cx="280" cy={sunY} r="25" fill={sunColor} opacity={sunOpacity} filter="url(#glow)" className="sun-transition" style={{transform: `scale(${sunScale})`, transformOrigin: `280px ${sunY}px`}} />
+
+                        {/* Birds (Only high levels) */}
+                        {progress > 0.7 && (
+                            <g className="animate-[fadeIn_2s_ease-in]" opacity="0.6" fill="none" stroke="#000" strokeWidth="1">
+                                <path d="M10 50 Q 20 60 30 50" transform="translate(0,0)">
+                                    <animateTransform attributeName="transform" type="translate" from="-50 20" to="450 50" dur="15s" repeatCount="indefinite" />
+                                </path>
+                                <path d="M10 50 Q 20 60 30 50" transform="translate(0,0)">
+                                    <animateTransform attributeName="transform" type="translate" from="-100 40" to="400 80" dur="12s" repeatCount="indefinite" />
+                                </path>
+                            </g>
+                        )}
+
+                        {/* Background Mountains */}
+                        <path d="M0 200 L100 120 L200 200 Z" fill={progress < 0.5 ? "#334155" : "#15803d"} opacity="0.8" className="transition-all duration-1000" />
+                        <path d="M150 200 L280 140 L400 200 Z" fill={progress < 0.5 ? "#1e293b" : "#166534"} opacity="0.9" className="transition-all duration-1000" />
+
+                        {/* Ground */}
+                        <rect x="0" y="180" width="400" height="20" fill={groundColor} className="transition-all duration-1000" />
+
+                        {/* Factory (Fades out) */}
+                        <g opacity={factoryOpacity} className="transition-opacity duration-1000">
+                            <path d="M20 180 V120 H50 V140 H60 V100 H90 V180 Z" fill="#1f293b" />
+                            <circle cx="75" cy="90" r="10" fill="#94a3b8" opacity={smogOpacity} className="animate-pulse" />
+                            <circle cx="85" cy="70" r="15" fill="#64748b" opacity={smogOpacity} className="animate-pulse" style={{animationDelay: '0.5s'}} />
+                            <circle cx="65" cy="60" r="12" fill="#475569" opacity={smogOpacity} className="animate-pulse" style={{animationDelay: '1s'}} />
+                        </g>
+
+                        {/* Tree (Grows organically) */}
+                        <g transform="translate(300, 180)">
+                            {/* Trunk */}
+                            <path d="M-5 0 L-5 -60 Q0 -80 5 -60 L5 0 Z" fill="#451a03" />
+                            
+                            {/* Canopy clusters - Each grows separately for "growing" effect */}
+                            <g transform="translate(0, -70)">
+                                <circle cx="0" cy="0" r="25" fill={leafColor} className="leaf-grow" style={{ transform: `scale(${c1Scale})` }} />
+                            </g>
+                            <g transform="translate(-20, -60)">
+                                <circle cx="0" cy="0" r="20" fill={leafColor} className="leaf-grow" style={{ transform: `scale(${c2Scale})` }} />
+                            </g>
+                            <g transform="translate(20, -60)">
+                                <circle cx="0" cy="0" r="20" fill={leafColor} className="leaf-grow" style={{ transform: `scale(${c3Scale})` }} />
+                            </g>
+                            <g transform="translate(0, -90)">
+                                <circle cx="0" cy="0" r="15" fill={leafColor} className="leaf-grow" style={{ transform: `scale(${c1Scale})` }} />
+                            </g>
+                        </g>
+
+                        {/* Flowers (Only appear at high progress, popping up) */}
+                        {progress > 0.8 && (
+                            <g className="animate-[bounce_2s_infinite]">
+                                <circle cx="250" cy="175" r="3" fill="red" />
+                                <circle cx="320" cy="178" r="3" fill="yellow" />
+                                <circle cx="350" cy="175" r="3" fill="purple" />
+                                <circle cx="280" cy="176" r="3" fill="orange" />
+                                <circle cx="370" cy="177" r="3" fill="pink" />
+                            </g>
+                        )}
+                    </svg>
+                </div>
+            );
+        };
 
         // --- HAUPTKOMPONENTE ---
         const Game = () => {
@@ -312,18 +482,25 @@
 
                     {/* START SCREEN */}
                     {gameState === 'start' && (
-                        <div className="z-10 text-center max-w-2xl glass-panel p-12 rounded-3xl shadow-2xl animate-[fadeIn_1s_ease-out]">
-                            <Trophy className="w-32 h-32 text-yellow-500 mx-auto mb-8 drop-shadow-[0_0_25px_rgba(234,179,8,0.6)] animate-pulse" />
-                            <h1 className="text-5xl md:text-7xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-600 drop-shadow-sm tracking-tighter">
+                        <div className="z-10 text-center max-w-2xl glass-panel p-12 rounded-3xl shadow-2xl animate-[fadeIn_1s_ease-out] border-blue-500/40 relative">
+                            
+                            <EcoLogo className="w-48 h-48 mx-auto mb-6 drop-shadow-[0_0_30px_rgba(74,222,128,0.4)]" />
+                            
+                            <h1 className="text-5xl md:text-7xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-blue-400 to-green-300 drop-shadow-sm tracking-tighter">
                                 ISO EXPERTE
                             </h1>
-                            <p className="text-2xl mb-10 text-blue-200 font-light">Wer wird Millionär: ISO 14001 & 50001 Edition</p>
+                            <p className="text-2xl mb-12 text-blue-200 font-light tracking-wide">Wer wird Millionär: ISO 14001 & 50001</p>
+                            
                             <button 
                                 onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 rounded-full text-2xl font-bold shadow-[0_0_20px_rgba(37,99,235,0.5)] transform hover:scale-105 transition-all border border-blue-400 text-white"
+                                className="px-12 py-5 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 rounded-full text-2xl font-bold shadow-[0_0_25px_rgba(37,235,100,0.4)] transform hover:scale-105 transition-all border border-green-400/50 text-white mb-8"
                             >
                                 Spiel starten
                             </button>
+
+                            <div className="mt-4 text-slate-500 text-sm font-medium">
+                                &copy; Jan-Niklas Rentzsch
+                            </div>
                         </div>
                     )}
 
@@ -354,6 +531,9 @@
                             
                             {/* Main Game Area */}
                             <div className="flex-1 flex flex-col justify-end min-h-[60vh] md:pb-10">
+                                
+                                {/* --- ECO MONITOR (ANIMATED LOGO) --- */}
+                                <EcoMonitor level={currentQuestionIndex} />
                                 
                                 {/* Question Bubble */}
                                 <div className="mb-10 relative group">
